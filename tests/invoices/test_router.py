@@ -49,7 +49,7 @@ def sample_invoice():
         tenant_id=1,
         vendor_id=2,
         invoice_number="INV-001",
-        amount=Decimal("100.50"),
+        amount=Decimal("100"),
         currency="USD",
         invoice_date=date(2026, 1, 15),
         due_date=date(2026, 2, 15),
@@ -70,7 +70,7 @@ class TestCreateInvoice:
         payload = {
             "vendorId": 2,
             "invoiceNumber": "INV-001",
-            "amount": "100.50",
+            "amount": "100",
             "currency": "usd",
             "invoiceDate": "2026-01-15",
             "dueDate": "2026-02-15",
@@ -86,7 +86,7 @@ class TestCreateInvoice:
         assert data["tenantId"] == 1
         assert data["vendorId"] == 2
         assert data["invoiceNumber"] == "INV-001"
-        assert float(data["amount"]) == 100.5
+        assert float(data["amount"]) == 100
         assert data["currency"] == "USD"
         assert data["status"] == "open"
         assert data["invoiceDate"] == "2026-01-15"
@@ -99,11 +99,11 @@ class TestCreateInvoice:
         sample_invoice.vendor_id = None
         sample_invoice.invoice_number = None
         sample_invoice.description = None
-        sample_invoice.amount = Decimal("50.00")
+        sample_invoice.amount = Decimal("50")
         mock_invoice_service.create_invoice = AsyncMock(return_value=sample_invoice)
 
         payload = {
-            "amount": "50.00"
+            "amount": "50"
         }
 
         response = client.post("/api/v1/tenants/1/invoices", json=payload)
@@ -113,7 +113,7 @@ class TestCreateInvoice:
         assert data["vendorId"] is None
         assert data["invoiceNumber"] is None
         assert data["description"] is None
-        assert float(data["amount"]) == 50.0
+        assert float(data["amount"]) == 50
         assert data["currency"] == "USD"
         assert data["status"] == "open"
 
@@ -158,7 +158,7 @@ class TestCreateInvoice:
         mock_invoice_service.create_invoice = AsyncMock(return_value=sample_invoice)
 
         payload = {
-            "amount": "100.50",
+            "amount": "100",
             "invoiceDate": 1768471200,  # 2026-01-15
             "dueDate": 1769810400,      # 2026-02-15
         }
@@ -172,7 +172,7 @@ class TestCreateInvoice:
         mock_invoice_service.create_invoice = AsyncMock(return_value=sample_invoice)
 
         payload = {
-            "amount": "100.50",
+            "amount": "100",
             "invoiceDate": 1768471200000,  # 2026-01-15 in ms
         }
 
@@ -185,7 +185,7 @@ class TestCreateInvoice:
         mock_invoice_service.create_invoice = AsyncMock()
 
         payload = {
-            "amount": "100.50",
+            "amount": "100",
             "invoiceDate": "15/01/2026",  # not ISO or timestamp
         }
 
@@ -304,12 +304,12 @@ class TestUpdateInvoice:
         assert data["description"] == "Updated"
 
     def test_update_invoice_partial_fields(self, client, mock_invoice_service, sample_invoice):
-        sample_invoice.amount = Decimal("150.00")
+        sample_invoice.amount = Decimal("150")
         sample_invoice.currency = "EUR"
         mock_invoice_service.update_invoice = AsyncMock(return_value=sample_invoice)
 
         payload = {
-            "amount": "150.00",
+            "amount": "150",
             "currency": "EUR"
         }
 
@@ -317,7 +317,7 @@ class TestUpdateInvoice:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert float(data["amount"]) == 150.0
+        assert float(data["amount"]) == 150
         assert data["currency"] == "EUR"
 
     def test_update_invoice_not_found_returns_404(self, client, mock_invoice_service):
@@ -354,8 +354,58 @@ class TestUpdateInvoice:
         data = response.json()
         assert "due date" in data["detail"].lower()
 
+    def test_create_invoice_rejects_non_integer_amount(self, client):
+        """Amount with decimal places returns 422."""
+        payload = {
+            "amount": "100.50",  # Has cents - not allowed
+        }
 
-class TestDeleteInvoice:
+        response = client.post("/api/v1/tenants/1/invoices", json=payload)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_create_invoice_rejects_zero_amount(self, client):
+        """Zero amount returns 422."""
+        payload = {
+            "amount": "0",
+        }
+
+        response = client.post("/api/v1/tenants/1/invoices", json=payload)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_create_invoice_rejects_negative_amount(self, client):
+        """Negative amount returns 422 - entire request rejected, no record stored."""
+        payload = {
+            "amount": "-100",  # Negative amount not allowed
+        }
+
+        response = client.post("/api/v1/tenants/1/invoices", json=payload)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_update_invoice_rejects_non_integer_amount(self, client, mock_invoice_service):
+        """Update with non-integer amount returns 422."""
+        payload = {
+            "amount": "150.75",  # Has cents - not allowed
+        }
+
+        response = client.patch("/api/v1/tenants/1/invoices/1", json=payload)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        mock_invoice_service.update_invoice.assert_not_awaited()
+
+    def test_update_invoice_rejects_negative_amount(self, client, mock_invoice_service):
+        """Update with negative amount returns 422."""
+        payload = {
+            "amount": "-50",  # Negative amount not allowed
+        }
+
+        response = client.patch("/api/v1/tenants/1/invoices/1", json=payload)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        mock_invoice_service.update_invoice.assert_not_awaited()
+
     """Tests for DELETE /api/v1/tenants/{tenant_id}/invoices/{id}."""
 
     def test_delete_invoice_success(self, client, mock_invoice_service):

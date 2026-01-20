@@ -23,7 +23,7 @@ class BankTransactionImportItem(BaseSchema):
             "Examples: 1768471200 or 1768471200000. Invalid formats return 422."
         )
     )
-    amount: Decimal = Field(..., decimal_places=2, description="Transaction amount (can be negative)")
+    amount: Decimal = Field(..., gt=0, decimal_places=2, description="Transaction amount (must be a positive integer, no cents allowed)")
     currency: str = Field(default="USD", min_length=3, max_length=3, description="3-letter currency code")
     description: str | None = Field(None, description="Bank memo/description")
 
@@ -43,6 +43,29 @@ class BankTransactionImportRequest(BaseSchema):
             if ts is None:
                 continue
             item["postedAt"] = cls._parse_timestamp(ts)
+        return v
+
+    @field_validator("transactions", mode="before")
+    @classmethod
+    def validate_amounts(cls, v):
+        # Validate each amount to be a positive integer (no cents)
+        for item in v or []:
+            amount = item.get("amount") if isinstance(item, dict) else None
+            if amount is None:
+                continue
+            # Convert to Decimal for validation
+            if isinstance(amount, str):
+                try:
+                    amount = Decimal(amount)
+                except:
+                    raise ValueError("amount must be a valid number")
+            elif isinstance(amount, (int, float)):
+                amount = Decimal(str(amount))
+            # Check if it's an integer (no decimal places)
+            if amount % 1 != 0:
+                raise ValueError("amount must be an integer (no cents allowed)")
+            if amount <= 0:
+                raise ValueError("amount must be greater than 0")
         return v
 
     @staticmethod

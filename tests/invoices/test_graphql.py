@@ -58,7 +58,7 @@ def sample_invoice():
         tenant_id=1,
         vendor_id=2,
         invoice_number="INV-001",
-        amount=Decimal("100.50"),
+        amount=Decimal("100"),
         currency="USD",
         invoice_date=date(2026, 1, 15),
         due_date=date(2026, 2, 15),
@@ -203,7 +203,7 @@ class TestCreateInvoiceMutation:
                 createInvoice(
                     tenantId: 1,
                     input: {
-                        amount: 100.50,
+                        amount: 100,
                         vendorId: 2,
                         invoiceNumber: "INV-001",
                         currency: "USD",
@@ -243,14 +243,14 @@ class TestCreateInvoiceMutation:
         sample_invoice.vendor_id = None
         sample_invoice.invoice_number = None
         sample_invoice.description = None
-        sample_invoice.amount = Decimal("50.00")
+        sample_invoice.amount = Decimal("50")
         mock_invoice_service.create_invoice = AsyncMock(return_value=sample_invoice)
 
         mutation = """
             mutation {
                 createInvoice(
                     tenantId: 1,
-                    input: { amount: 50.00 }
+                    input: { amount: 50 }
                 ) {
                     id
                     amount
@@ -272,7 +272,7 @@ class TestCreateInvoiceMutation:
         assert inv["vendorId"] is None
         assert inv["invoiceNumber"] is None
         assert inv["description"] is None
-        assert float(inv["amount"]) == 50.0
+        assert float(inv["amount"]) == 50
         assert inv["currency"] == "USD"
         assert inv["status"] == "open"
         mock_invoice_service.create_invoice.assert_called_once()
@@ -285,7 +285,7 @@ class TestCreateInvoiceMutation:
                 createInvoice(
                     tenantId: 1,
                     input: {
-                        amount: 100.50,
+                        amount: 100,
                         invoiceDate: "1768471200",
                         dueDate: "1769810400"
                     }
@@ -311,7 +311,7 @@ class TestCreateInvoiceMutation:
                 createInvoice(
                     tenantId: 1,
                     input: {
-                        amount: 100.50,
+                        amount: 100,
                         invoiceDate: "1768471200000"
                     }
                 ) {
@@ -399,6 +399,30 @@ class TestCreateInvoiceMutation:
         data = response.json()
         assert "errors" in data
         assert "due date" in data["errors"][0]["message"].lower()
+
+    def test_create_invoice_rejects_negative_amount(self, client, mock_invoice_service):
+        """Negative amount returns error - entire request rejected, no record stored."""
+        mock_invoice_service.create_invoice = AsyncMock()
+
+        mutation = """
+            mutation {
+                createInvoice(
+                    tenantId: 1,
+                    input: {
+                        amount: -100.0,
+                        invoiceDate: "2026-01-15"
+                    }
+                ) {
+                    id
+                }
+            }
+        """
+
+        response = client.post("/graphql", json={"query": mutation})
+
+        assert response.status_code == 200
+        assert "errors" in response.json()
+        mock_invoice_service.create_invoice.assert_not_called()
 
 
 class TestDeleteInvoiceMutation:

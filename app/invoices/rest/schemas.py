@@ -19,13 +19,21 @@ class InvoiceCreate(BaseSchema):
         ...,
         gt=0,
         decimal_places=2,
-        description="Invoice amount (must be positive)"
+        description="Invoice amount (must be a positive integer, no cents allowed)"
     )
     
     vendor_id: int | None = Field(
         default=None,
         description="Vendor ID (optional - vendor domain may not exist yet)"
     )
+
+    @field_validator("amount")
+    @classmethod
+    def validate_amount_is_integer(cls, v: Decimal) -> Decimal:
+        """Ensure amount is an integer with no decimal places."""
+        if v % 1 != 0:
+            raise ValueError("amount must be an integer (no cents allowed)")
+        return v
     
     invoice_number: str | None = Field(
         default=None,
@@ -103,7 +111,7 @@ class InvoiceUpdate(BaseSchema):
         default=None,
         gt=0,
         decimal_places=2,
-        description="Invoice amount (must be positive)"
+        description="Invoice amount (must be a positive integer, no cents allowed)"
     )
     
     currency: str | None = Field(
@@ -112,6 +120,14 @@ class InvoiceUpdate(BaseSchema):
         max_length=3,
         description="3-letter currency code"
     )
+
+    @field_validator("amount")
+    @classmethod
+    def validate_amount_is_integer(cls, v: Decimal | None) -> Decimal | None:
+        """Ensure amount is an integer with no decimal places."""
+        if v is not None and v % 1 != 0:
+            raise ValueError("amount must be an integer (no cents allowed)")
+        return v
     
     invoice_date: date | None = Field(
         default=None,

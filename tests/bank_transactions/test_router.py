@@ -70,7 +70,7 @@ def sample_transactions():
             tenant_id=1,
             external_id="TX-001",
             posted_at=datetime(2026, 1, 15, 10, 0, 0),
-            amount=Decimal("150.00"),
+            amount=Decimal("150"),
             currency="USD",
             description="Payment received",
             created_at=datetime(2026, 1, 20, 10, 0, 0),
@@ -81,7 +81,7 @@ def sample_transactions():
             tenant_id=1,
             external_id="TX-002",
             posted_at=datetime(2026, 1, 16, 14, 30, 0),
-            amount=Decimal("-50.00"),
+            amount=Decimal("50"),
             currency="USD",
             description="Payment sent",
             created_at=datetime(2026, 1, 20, 10, 0, 0),
@@ -106,14 +106,14 @@ class TestImportBankTransactions:
                 {
                     "externalId": "TX-001",
                     "postedAt": 1768471200,  # 2026-01-15T10:00:00Z
-                    "amount": "150.00",
+                    "amount": "150",
                     "currency": "USD",
                     "description": "Payment received",
                 },
                 {
                     "externalId": "TX-002",
                     "postedAt": 1768593000,  # 2026-01-16T14:30:00Z
-                    "amount": "-50.00",
+                    "amount": "50",
                     "currency": "USD",
                     "description": "Payment sent",
                 },
@@ -129,7 +129,7 @@ class TestImportBankTransactions:
         assert data["transactions"][0]["externalId"] == "TX-001"
         assert float(data["transactions"][0]["amount"]) == 150.0
         assert data["transactions"][1]["externalId"] == "TX-002"
-        assert float(data["transactions"][1]["amount"]) == -50.0
+        assert float(data["transactions"][1]["amount"]) == 50.0
 
     def test_import_success_with_idempotency_key(
         self, client, mock_bank_transaction_service, mock_idempotency_repo, sample_transactions
@@ -145,7 +145,7 @@ class TestImportBankTransactions:
                 {
                     "externalId": "TX-001",
                     "postedAt": 1768471200,
-                    "amount": "150.00",
+                    "amount": "150",
                     "currency": "USD",
                 }
             ]
@@ -196,9 +196,8 @@ class TestImportBankTransactions:
                 {
                     "externalId": "TX-001",
                     "postedAt": 1768471200,
-                    "amount": "150.00",
+                    "amount": "150",
                     "currency": "USD",
-                    "description": "Payment received",
                 }
             ]
         }
@@ -232,7 +231,7 @@ class TestImportBankTransactions:
                 {
                     "externalId": "TX-DIFFERENT",
                     "postedAt": 1768471200,
-                    "amount": "999.00",
+                    "amount": "999",
                     "currency": "USD",
                 }
             ]
@@ -277,12 +276,12 @@ class TestImportBankTransactions:
                 {
                     "externalId": "TX-001",
                     "postedAt": 1768471200,
-                    "amount": "100.00",
+                    "amount": "100",
                 },
                 {
                     "externalId": "TX-001",
                     "postedAt": 1768509600,
-                    "amount": "200.00",
+                    "amount": "200",
                 },
             ]
         }
@@ -308,7 +307,7 @@ class TestImportBankTransactions:
                 {
                     "externalId": "TX-001",
                     "postedAt": 1768471200,
-                    "amount": "100.00",
+                    "amount": "100",
                 }
             ]
         }
@@ -356,7 +355,7 @@ class TestImportBankTransactions:
                 {
                     "externalId": "TX-001",
                     "postedAt": 1768471200,
-                    "amount": "100.00",
+                    "amount": "100",
                 }
             ]
         }
@@ -391,7 +390,7 @@ class TestImportBankTransactions:
             "transactions": [
                 {
                     "postedAt": 1768471200,
-                    "amount": "100.00",
+                    "amount": "100",
                     "description": "Manual entry",
                 }
             ]
@@ -444,7 +443,7 @@ class TestImportBankTransactions:
             tenant_id=1,
             external_id="",  # Empty string (different from None)
             posted_at=datetime(2026, 1, 15, 10, 0, 0),
-            amount=Decimal("100.00"),
+            amount=Decimal("100"),
             currency="USD",
             description="",  # Empty string (different from None)
             created_at=datetime(2026, 1, 20, 10, 0, 0),
@@ -460,7 +459,7 @@ class TestImportBankTransactions:
                 {
                     "externalId": "",  # Explicitly empty
                     "postedAt": 1768471200,
-                    "amount": "100.00",
+                    "amount": "100",
                     "description": "",  # Explicitly empty
                 }
             ]
@@ -488,7 +487,7 @@ class TestImportBankTransactions:
                 {
                     "externalId": "TX-123",
                     "postedAt": 1768471200000,  # milliseconds
-                    "amount": "100.00",
+                    "amount": "100",
                 }
             ]
         }
@@ -503,7 +502,7 @@ class TestImportBankTransactions:
             "transactions": [
                 {
                     "postedAt": "2026-01-15T10:00:00Z",  # ISO not allowed now
-                    "amount": "100.00",
+                    "amount": "100",
                 }
             ]
         }
@@ -524,7 +523,7 @@ class TestImportBankTransactions:
             "transactions": [
                 {
                     "postedAt": "1768471200",  # string form of seconds timestamp
-                    "amount": "100.00",
+                    "amount": "100",
                 }
             ]
         }
@@ -552,4 +551,60 @@ class TestImportBankTransactions:
         response = client.post("/api/v1/tenants/1/bank-transactions/import", json=payload)
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        mock_bank_transaction_service.bulk_import_transactions.assert_not_awaited()
+
+    def test_import_rejects_non_integer_amount(self, client, mock_bank_transaction_service):
+        """Amount with decimal places returns 422."""
+        mock_bank_transaction_service.bulk_import_transactions = AsyncMock()
+
+        payload = {
+            "transactions": [
+                {
+                    "postedAt": 1768471200,
+                    "amount": "100.50",  # Has cents - not allowed
+                }
+            ]
+        }
+
+        response = client.post("/api/v1/tenants/1/bank-transactions/import", json=payload)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        mock_bank_transaction_service.bulk_import_transactions.assert_not_awaited()
+
+    def test_import_rejects_zero_amount(self, client, mock_bank_transaction_service):
+        """Zero amount returns 422."""
+        mock_bank_transaction_service.bulk_import_transactions = AsyncMock()
+
+        payload = {
+            "transactions": [
+                {
+                    "postedAt": 1768471200,
+                    "amount": "0",
+                }
+            ]
+        }
+
+        response = client.post("/api/v1/tenants/1/bank-transactions/import", json=payload)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        mock_bank_transaction_service.bulk_import_transactions.assert_not_awaited()
+
+    def test_import_rejects_negative_amount(self, client, mock_bank_transaction_service):
+        """Negative amount returns 422 - entire batch rejected, no records stored."""
+        mock_bank_transaction_service.bulk_import_transactions = AsyncMock()
+
+        payload = {
+            "transactions": [
+                {
+                    "externalId": "TX-001",
+                    "postedAt": 1768471200,
+                    "amount": "-50",  # Negative amount not allowed
+                }
+            ]
+        }
+
+        response = client.post("/api/v1/tenants/1/bank-transactions/import", json=payload)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        # Service is never called - validation happens at schema level
         mock_bank_transaction_service.bulk_import_transactions.assert_not_awaited()
