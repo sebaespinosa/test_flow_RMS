@@ -3,6 +3,7 @@ Test idempotency repository functionality.
 """
 
 import pytest
+import pytest_asyncio
 from datetime import datetime, timedelta
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
