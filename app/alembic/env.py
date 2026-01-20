@@ -2,6 +2,15 @@
 
 from logging.config import fileConfig
 import asyncio
+import sys
+from pathlib import Path
+
+# Add project root to Python path so app modules can be imported
+# alembic/env.py is at app/alembic/env.py, so go up 2 levels to project root
+project_root = Path(__file__).parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from sqlalchemy import pool
 from sqlalchemy.engine import URL
 from sqlalchemy.ext.asyncio import create_async_engine

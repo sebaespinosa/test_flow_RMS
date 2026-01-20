@@ -3,13 +3,13 @@ FastAPI application factory and configuration.
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.responses import JSONResponse
 from app.config.settings import get_settings
 from app.config.logging import configure_logging
 from app.config.middleware import setup_middleware
 from app.config.exceptions import app_exception_handler, validation_error_handler, AppException
-from app.database.session import init_db, close_db
+from app.database.session import init_db, close_db, get_db
 
 
 # Configure logging before app creation
@@ -44,9 +44,21 @@ def create_app() -> FastAPI:
     
     # Health check endpoint
     @app.get("/health", tags=["health"])
-    async def health_check():
-        """Health check endpoint"""
-        return {"status": "healthy", "environment": settings.environment}
+    async def health_check(db = Depends(get_db)):
+        """Health check endpoint with database connectivity check"""
+        try:
+            from sqlalchemy import text
+            # Execute simple query to verify database connection
+            await db.execute(text("SELECT 1"))
+            db_status = "connected"
+        except Exception as e:
+            db_status = f"error: {str(e)}"
+        
+        return {
+            "status": "healthy",
+            "environment": settings.environment,
+            "database": db_status
+        }
     
     # Root endpoint
     @app.get("/", tags=["root"])
