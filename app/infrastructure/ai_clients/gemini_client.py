@@ -5,7 +5,7 @@ Google Gemini API client wrapper with retry and error handling.
 import json
 import logging
 from typing import Optional
-import google.generativeai as genai
+import google.genai as genai
 from google.api_core.exceptions import (
     ServiceUnavailable,
     TooManyRequests,
@@ -40,8 +40,7 @@ class GeminiClient:
             raise ValueError("GEMINI_API_KEY is required")
 
         self.settings = settings
-        genai.configure(api_key=settings.gemini_api_key)
-        self.model = genai.GenerativeModel(settings.gemini_model_id)
+        self.client = genai.Client(api_key=settings.gemini_api_key)
         logger.info(f"Gemini client initialized with model: {settings.gemini_model_id}")
 
     async def generate_explanation(
@@ -158,9 +157,10 @@ Provide your expert assessment of this match.
         import asyncio
 
         def _call_sync() -> str:
-            response = self.model.generate_content(
-                [system_prompt, user_prompt],
-                generation_config=genai.types.GenerationConfig(
+            response = self.client.models.generate_content(
+                model=self.settings.gemini_model_id,
+                contents=[system_prompt, user_prompt],
+                config=genai.types.GenerateContentConfig(
                     temperature=temperature,
                     max_output_tokens=max_tokens,
                 ),

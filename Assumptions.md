@@ -16,6 +16,7 @@ The following topics were consider, but not implemented on the project. Just to 
 - Environment file use and included on the repo, just for the challenge. It shouldn't be include on the repo, and for production a secret store should be use
 - No docker-compose and Dockerfile add for building and creating other tools environment, but it was consider
 - No CI/CD script add, but I am very familiar with them and deploying to cloud services following best practices.
+- Basic Swagger documentation, almost only out-of-the-box, didn't have the time to improve it
 
 # To improve
 - Happy path testing only for most endpoints, only few edge cases covered like empty data, negative values. But I am aware non-happy paths are the real testing.

@@ -17,13 +17,68 @@ Although the application is heavy developed using AI Coding Assitance (copilot i
 ## Run the application
 
 1. The project uses poetry for virtual environment handling, althought a requirements.txt file is provided for using another tool
-2. Update .env file
-2. Start the application -> code -> run migrations -> localhost/health
-    Use debug for VSConde
-3. Seed endpoint
+```bash
+poetry install --no-root  # Keep .env as template, use .env.local for local overrides
+# Use file requirements.txt with another virtual environment and dependency manager
+```
+2. Update .env file with your GEMINI_API_KEY and other variables (You can get one from Google AI Studio). Set ENABLE_SEED_ENDPOINTS=true before calling any seed endpoints; they are off by default to prevent accidents.
+3. Run Alembic migrations (from repo root; point Alembic to the config under app/):
+```bash
+poetry run alembic -c app/alembic.ini upgrade head
+```
+4. Run the Development Server
+    - Via CLI:
+    ```bash
+    #From the project root folder
+    poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    ```
+    - Via VS Code Debugger:
+        1. Open `.vscode/launch.json`
+        2. Click "Run and Debug" (or press `F5`)
+        3. Select "test_flow_RMS" configuration
+        4. Server starts with breakpoint support
+    - Visit: [http://localhost:8000/docs](http://localhost:8000/docs) for interactive API docs.
 
-POST /api/v1/seed
-POST /api/v1/seed/cleanup
+5. Seed Test Data (Optional, requires ENABLE_SEED_ENDPOINTS=true)
+```bash
+curl -X POST http://localhost:8000/api/v1/seed
+```
+- **Inspect data**:
+```bash
+curl http://localhost:8000/api/v1/seed/status
+```
+- **Clean up**:
+```bash
+curl -X POST http://localhost:8000/api/v1/seed/cleanup
+```
 
-Testing
-For testing without AI, set AI_ENABLED=false (won't require API key)
+
+
+
+
+
+## Run Tests
+
+### Run all tests:
+```bash
+poetry run pytest tests/ -v
+```
+
+### Run specific test module:
+```bash
+poetry run pytest tests/tenants/ -v
+poetry run pytest tests/invoices/ -v
+poetry run pytest tests/bank_transactions/ -v
+poetry run pytest tests/reconciliation/ -v
+poetry run pytest tests/ai/ -v  # Requires AI to be enabled
+```
+
+### Run with coverage:
+```bash
+poetry run pytest tests/ --cov=app --cov-report=html
+```
+
+### Run in watch mode (auto-rerun on file changes):
+```bash
+poetry run pytest tests/ -v --tb=short --looponfail
+```

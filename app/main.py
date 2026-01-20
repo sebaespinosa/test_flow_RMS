@@ -2,14 +2,32 @@
 FastAPI application factory and configuration.
 """
 
+import warnings
+from pydantic.warnings import ArbitraryTypeWarning
+
+# Silence Pydantic arbitrary type warnings emitted inside google.genai models only
+warnings.filterwarnings(
+    "ignore",
+    category=ArbitraryTypeWarning,
+    module="google.genai.*",
+)
+# google.genai declares a Pydantic model with a non-type `any`; silence that single warning
+warnings.filterwarnings(
+    "ignore",
+    category=ArbitraryTypeWarning,
+    message=r"<built-in function any> is not a Python type.*",
+)
+
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+
+from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
-from app.config.settings import get_settings
+
+from app.config.exceptions import AppException, app_exception_handler, validation_error_handler
 from app.config.logging import configure_logging
 from app.config.middleware import setup_middleware
-from app.config.exceptions import app_exception_handler, validation_error_handler, AppException
-from app.database.session import init_db, close_db, get_db
+from app.config.settings import get_settings
+from app.database.session import close_db, get_db, init_db
 
 
 # Configure logging before app creation
@@ -61,7 +79,7 @@ def create_app() -> FastAPI:
         }
     
     # Root endpoint
-    @app.get("/", tags=["root"])
+    @app.get("/", tags=["root"], include_in_schema=False)
     async def root():
         """API root endpoint"""
         return {
@@ -95,7 +113,7 @@ def create_app() -> FastAPI:
         schema,
         context_getter=get_graphql_context
     )
-    app.include_router(graphql_app, prefix="/graphql", tags=["graphql"])
+    app.include_router(graphql_app, prefix="/graphql", tags=["graphql"], include_in_schema=False)
     
     return app
 
