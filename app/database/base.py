@@ -20,11 +20,12 @@ def register_models():
     # Domain models
     from app.tenants.models import TenantEntity  # noqa: F401
     from app.invoices.models import InvoiceEntity  # noqa: F401
+    from app.bank_transactions.models import BankTransactionEntity  # noqa: F401
 
     # Infrastructure models (always required)
     from app.infrastructure.idempotency.models import IdempotencyRecordEntity  # noqa: F401
     
-    return [TenantEntity, InvoiceEntity, IdempotencyRecordEntity]
+    return [TenantEntity, InvoiceEntity, BankTransactionEntity, IdempotencyRecordEntity]
 
 
 __all__ = ["Base", "register_models"]
