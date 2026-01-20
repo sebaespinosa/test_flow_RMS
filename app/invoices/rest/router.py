@@ -127,8 +127,8 @@ async def list_invoices(
         vendor_id: Filter by vendor ID
         min_amount: Minimum amount filter
         max_amount: Maximum amount filter
-        start_date: Start date for invoice_date range (ISO format)
-        end_date: End date for invoice_date range (ISO format)
+        start_date: Start date for invoice_date range (Unix timestamp seconds/milliseconds or ISO date)
+        end_date: End date for invoice_date range (Unix timestamp seconds/milliseconds or ISO date)
         service: Injected InvoiceService
         
     Returns:

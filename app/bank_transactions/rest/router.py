@@ -42,7 +42,11 @@ def get_bank_transaction_service(db: Annotated[AsyncSession, Depends(get_db)]) -
     response_model=BankTransactionImportResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Bulk import bank transactions with idempotency",
-    description="Import multiple bank transactions. Supports idempotency via Idempotency-Key header.",
+    description=(
+        "Import multiple bank transactions. Supports idempotency via Idempotency-Key header. "
+        "posted_at must be a Unix timestamp (seconds or milliseconds); invalid formats return 422. "
+        "Empty strings for description/externalId are accepted and preserved as provided."
+    ),
 )
 async def import_bank_transactions(
     tenant_id: int,

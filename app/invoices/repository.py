@@ -3,7 +3,7 @@ Invoice repository - data access layer implementation.
 Handles all database operations for invoices.
 """
 
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from app.invoices.models import InvoiceEntity
@@ -70,8 +70,8 @@ class InvoiceRepository(IInvoiceRepository):
         vendor_id: int | None = None,
         min_amount: float | None = None,
         max_amount: float | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
     ) -> list[InvoiceEntity]:
         """
         Retrieve all invoices for a tenant with optional filtering.

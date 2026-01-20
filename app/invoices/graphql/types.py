@@ -63,7 +63,7 @@ class CreateInvoiceInput:
     vendor_id: Optional[int] = None
     invoice_number: Optional[str] = None
     currency: Optional[str] = "USD"
-    invoice_date: Optional[date] = None
-    due_date: Optional[date] = None
+    invoice_date: Optional[str] = None  # Accept Unix timestamp (sec/ms) or ISO date string
+    due_date: Optional[str] = None      # Accept Unix timestamp (sec/ms) or ISO date string
     description: Optional[str] = None
     status: Optional[str] = "open"

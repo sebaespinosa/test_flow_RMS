@@ -267,6 +267,7 @@ class TestCreateInvoiceMutation:
 
         assert response.status_code == 200
         data = response.json()
+        assert "errors" not in data
         inv = data["data"]["createInvoice"]
         assert inv["vendorId"] is None
         assert inv["invoiceNumber"] is None
@@ -274,6 +275,80 @@ class TestCreateInvoiceMutation:
         assert float(inv["amount"]) == 50.0
         assert inv["currency"] == "USD"
         assert inv["status"] == "open"
+        mock_invoice_service.create_invoice.assert_called_once()
+
+    def test_create_invoice_accepts_timestamp_seconds(self, client, mock_invoice_service, sample_invoice):
+        mock_invoice_service.create_invoice = AsyncMock(return_value=sample_invoice)
+
+        mutation = """
+            mutation {
+                createInvoice(
+                    tenantId: 1,
+                    input: {
+                        amount: 100.50,
+                        invoiceDate: "1768471200",
+                        dueDate: "1769810400"
+                    }
+                ) {
+                    id
+                    invoiceDate
+                    dueDate
+                }
+            }
+        """
+
+        response = client.post("/graphql", json={"query": mutation})
+
+        assert response.status_code == 200
+        assert "errors" not in response.json()
+        mock_invoice_service.create_invoice.assert_called_once()
+
+    def test_create_invoice_accepts_timestamp_milliseconds(self, client, mock_invoice_service, sample_invoice):
+        mock_invoice_service.create_invoice = AsyncMock(return_value=sample_invoice)
+
+        mutation = """
+            mutation {
+                createInvoice(
+                    tenantId: 1,
+                    input: {
+                        amount: 100.50,
+                        invoiceDate: "1768471200000"
+                    }
+                ) {
+                    id
+                    invoiceDate
+                }
+            }
+        """
+
+        response = client.post("/graphql", json={"query": mutation})
+
+        assert response.status_code == 200
+        assert "errors" not in response.json()
+        mock_invoice_service.create_invoice.assert_called_once()
+
+    def test_create_invoice_rejects_invalid_date_format(self, client, mock_invoice_service):
+        mock_invoice_service.create_invoice = AsyncMock()
+
+        mutation = """
+            mutation {
+                createInvoice(
+                    tenantId: 1,
+                    input: {
+                        amount: 100.50,
+                        invoiceDate: "15/01/2026"
+                    }
+                ) {
+                    id
+                }
+            }
+        """
+
+        response = client.post("/graphql", json={"query": mutation})
+
+        assert response.status_code == 200
+        assert "errors" in response.json()
+        mock_invoice_service.create_invoice.assert_not_called()
 
     def test_create_invoice_conflict_error(self, client, mock_invoice_service):
         mock_invoice_service.create_invoice = AsyncMock(

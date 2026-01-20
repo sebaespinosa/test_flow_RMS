@@ -42,12 +42,12 @@ class InvoiceCreate(BaseSchema):
     
     invoice_date: date | None = Field(
         default=None,
-        description="Invoice issue date"
+        description="Invoice issue date (Unix timestamp seconds/milliseconds or ISO date)"
     )
-    
+
     due_date: date | None = Field(
         default=None,
-        description="Payment due date"
+        description="Payment due date (Unix timestamp seconds/milliseconds or ISO date)"
     )
     
     description: str | None = Field(
@@ -65,6 +65,11 @@ class InvoiceCreate(BaseSchema):
     def validate_currency(cls, v: str) -> str:
         """Ensure currency is uppercase"""
         return v.upper()
+
+    @field_validator("invoice_date", "due_date", mode="before")
+    @classmethod
+    def parse_dates(cls, v):
+        return _parse_unix_date(v)
     
     @field_validator("status")
     @classmethod
@@ -110,12 +115,12 @@ class InvoiceUpdate(BaseSchema):
     
     invoice_date: date | None = Field(
         default=None,
-        description="Invoice issue date"
+        description="Invoice issue date (Unix timestamp seconds/milliseconds or ISO date)"
     )
-    
+
     due_date: date | None = Field(
         default=None,
-        description="Payment due date"
+        description="Payment due date (Unix timestamp seconds/milliseconds or ISO date)"
     )
     
     description: str | None = Field(
@@ -143,6 +148,11 @@ class InvoiceUpdate(BaseSchema):
             if v not in allowed:
                 raise ValueError(f"Status must be one of: {', '.join(allowed)}")
         return v
+
+    @field_validator("invoice_date", "due_date", mode="before")
+    @classmethod
+    def parse_dates(cls, v):
+        return _parse_unix_date(v)
 
 
 class InvoiceRead(TimestampSchema):
@@ -203,5 +213,37 @@ class InvoiceFilters(BaseSchema):
     vendor_id: int | None = Field(default=None, description="Filter by vendor ID")
     min_amount: float | None = Field(default=None, ge=0, description="Minimum amount")
     max_amount: float | None = Field(default=None, ge=0, description="Maximum amount")
-    start_date: str | None = Field(default=None, description="Start date (ISO format)")
-    end_date: str | None = Field(default=None, description="End date (ISO format)")
+    start_date: date | None = Field(
+        default=None,
+        description="Start date (Unix timestamp seconds/milliseconds or ISO date)"
+    )
+    end_date: date | None = Field(
+        default=None,
+        description="End date (Unix timestamp seconds/milliseconds or ISO date)"
+    )
+
+    @field_validator("start_date", "end_date", mode="before")
+    @classmethod
+    def parse_filter_dates(cls, v):
+        return _parse_unix_date(v)
+
+
+def _parse_unix_date(value):
+    if value is None:
+        return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, (int, float)) or (isinstance(value, str) and value.replace(".", "", 1).isdigit()):
+        numeric = float(value)
+        if numeric > 1e12:
+            numeric = numeric / 1000.0
+        return datetime.utcfromtimestamp(numeric).date()
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            # Preserve original to surface validation error upstream
+            raise ValueError("Date fields must be Unix timestamp (seconds or milliseconds) or ISO date string")
+    raise ValueError("Date fields must be Unix timestamp (seconds or milliseconds) or ISO date string")

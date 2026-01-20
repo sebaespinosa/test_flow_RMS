@@ -154,6 +154,46 @@ class TestCreateInvoice:
         response = client.post("/api/v1/tenants/1/invoices", json={})
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
+    def test_create_invoice_accepts_timestamp_seconds(self, client, mock_invoice_service, sample_invoice):
+        mock_invoice_service.create_invoice = AsyncMock(return_value=sample_invoice)
+
+        payload = {
+            "amount": "100.50",
+            "invoiceDate": 1768471200,  # 2026-01-15
+            "dueDate": 1769810400,      # 2026-02-15
+        }
+
+        response = client.post("/api/v1/tenants/1/invoices", json=payload)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        mock_invoice_service.create_invoice.assert_awaited_once()
+
+    def test_create_invoice_accepts_timestamp_milliseconds(self, client, mock_invoice_service, sample_invoice):
+        mock_invoice_service.create_invoice = AsyncMock(return_value=sample_invoice)
+
+        payload = {
+            "amount": "100.50",
+            "invoiceDate": 1768471200000,  # 2026-01-15 in ms
+        }
+
+        response = client.post("/api/v1/tenants/1/invoices", json=payload)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        mock_invoice_service.create_invoice.assert_awaited_once()
+
+    def test_create_invoice_rejects_invalid_date_format(self, client, mock_invoice_service):
+        mock_invoice_service.create_invoice = AsyncMock()
+
+        payload = {
+            "amount": "100.50",
+            "invoiceDate": "15/01/2026",  # not ISO or timestamp
+        }
+
+        response = client.post("/api/v1/tenants/1/invoices", json=payload)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        mock_invoice_service.create_invoice.assert_not_awaited()
+
 
 class TestGetInvoice:
     """Tests for GET /api/v1/tenants/{tenant_id}/invoices/{id}."""

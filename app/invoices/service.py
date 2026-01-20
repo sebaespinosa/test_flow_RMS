@@ -3,16 +3,13 @@ Invoice service - business logic layer.
 Handles invoice operations and validations independent of delivery mechanism (REST/GraphQL).
 """
 
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
-from typing import TYPE_CHECKING
 from app.invoices.models import InvoiceEntity
 from app.invoices.interfaces import IInvoiceRepository
 from app.tenants.interfaces import ITenantRepository
 from app.config.exceptions import ConflictError, NotFoundError, ValidationError
-
-if TYPE_CHECKING:
-    from app.invoices.rest.schemas import InvoiceCreate, InvoiceUpdate
+from app.invoices.rest.schemas import InvoiceCreate, InvoiceUpdate, _parse_unix_date
 
 
 class InvoiceService:
@@ -54,7 +51,7 @@ class InvoiceService:
     
     async def create_invoice(
         self,
-        data: 'InvoiceCreate',
+        data: InvoiceCreate,
         tenant_id: int
     ) -> InvoiceEntity:
         """
@@ -137,8 +134,8 @@ class InvoiceService:
         vendor_id: int | None = None,
         min_amount: float | None = None,
         max_amount: float | None = None,
-        start_date: str | None = None,
-        end_date: str | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
     ) -> list[InvoiceEntity]:
         """
         List all invoices for a tenant with optional filtering.
@@ -179,6 +176,9 @@ class InvoiceService:
                     detail="Minimum amount cannot be greater than maximum amount"
                 )
         
+        parsed_start = _parse_unix_date(start_date)
+        parsed_end = _parse_unix_date(end_date)
+
         return await self.repository.get_all(
             tenant_id=tenant_id,
             skip=skip,
@@ -187,14 +187,14 @@ class InvoiceService:
             vendor_id=vendor_id,
             min_amount=min_amount,
             max_amount=max_amount,
-            start_date=start_date,
-            end_date=end_date,
+            start_date=parsed_start,
+            end_date=parsed_end,
         )
     
     async def update_invoice(
         self,
         invoice_id: int,
-        data: 'InvoiceUpdate',
+        data: InvoiceUpdate,
         tenant_id: int
     ) -> InvoiceEntity:
         """
