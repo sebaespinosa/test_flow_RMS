@@ -354,6 +354,8 @@ def is_valid_user(user: UserEntity | None) -> TypeIs[UserEntity]:
 - `pytest` for test framework
 - `pytest-mock` for mocking
 - `pytest-asyncio` for async tests
+- `AsyncMock` for async functions/methods
+- FastAPI `TestClient` for endpoint testing
 
 ### Test Structure
 
@@ -367,11 +369,60 @@ async def test_create_invoice(mock_repository):
     assert result.amount == data.amount
 ```
 
+### FastAPI Router Testing Pattern
+
+**CRITICAL**: Use `app.dependency_overrides` for FastAPI dependencies, NOT monkeypatch.
+
+```python
+# ✅ Correct - Override FastAPI dependencies
+@pytest.fixture
+def mock_tenant_service():
+    """Mock service with AsyncMock"""
+    return AsyncMock(spec=TenantService)
+
+
+async def mock_get_db():
+    """Mock database dependency to avoid DB initialization"""
+    yield MagicMock()
+
+
+@pytest.fixture
+def client(mock_tenant_service):
+    """TestClient with dependency overrides"""
+    from app.database.session import get_db
+    from app.tenants.rest.router import get_tenant_service
+    
+    app = create_app()
+    
+    # Override BOTH database and service dependencies
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_tenant_service] = lambda: mock_tenant_service
+    
+    return TestClient(app)
+
+
+# ❌ Wrong - monkeypatch doesn't work with TestClient
+@pytest.fixture
+def client(monkeypatch, mock_service):
+    monkeypatch.setattr("app.router.get_service", lambda: mock_service)
+    # TestClient resolves dependencies BEFORE monkeypatch takes effect
+    return TestClient(create_app())
+```
+
+### Dependency Override Checklist
+
+When creating router tests, ALWAYS override:
+
+1. ✅ `get_db` - Prevents database initialization
+2. ✅ `get_<domain>_service` - Uses mocked service instead of real one
+3. ✅ Any other external dependencies (auth, cache, etc.)
+
 ### Mock at Service Boundaries
 
 - Mock repositories when testing services
-- Mock services when testing controllers
+- Mock services when testing controllers (use `AsyncMock` for async services)
 - Use real database for integration tests
+- Use `app.dependency_overrides` for FastAPI endpoint tests
 
 ---
 
@@ -389,6 +440,9 @@ async def test_create_invoice(mock_repository):
 10. ❌ **Checking idempotency in middleware instead of as a dependency** (can't differentiate GraphQL operations)
 11. ❌ **Keeping idempotency keys indefinitely** (unbounded database growth)
 12. ❌ **Trusting client-provided cached responses** (always store YOUR response)
+13. ❌ **Using `monkeypatch` for FastAPI dependencies** (use `app.dependency_overrides` instead)
+14. ❌ **Forgetting to override `get_db` in router tests** (causes "Database not initialized" errors)
+15. ❌ **Using regular `Mock` for async functions** (use `AsyncMock` instead)
 
 ---
 
@@ -409,6 +463,8 @@ async def test_create_invoice(mock_repository):
 | Add auth check | Dependency | `auth/dependencies.py` |
 | **Add idempotency** | **Dependency + Service** | **`infrastructure/idempotency/` + `service.py`** |
 | **Prevent duplicate writes** | **Unit of Work transaction** | **Service layer with explicit `async with session.begin()`** |
+| **Test FastAPI router** | **`app.dependency_overrides`** | **`tests/[domain]/test_router.py`** |
+| **Mock async service** | **`AsyncMock(spec=Service)`** | **Test fixtures** |
 
 ---
 
