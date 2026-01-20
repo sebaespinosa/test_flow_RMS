@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db
 from app.tenants.service import TenantService
 from app.tenants.repository import TenantRepository
+from app.invoices.repository import InvoiceRepository
+from app.invoices.service import InvoiceService
 
 
 async def get_graphql_context(
@@ -28,8 +30,15 @@ async def get_graphql_context(
     # Create services using constructor injection pattern
     tenant_repository = TenantRepository(db)
     tenant_service = TenantService(tenant_repository)
+
+    invoice_repository = InvoiceRepository(db)
+    invoice_service = InvoiceService(
+        repository=invoice_repository,
+        tenant_repository=tenant_repository
+    )
     
     return {
         "db": db,
         "tenant_service": tenant_service,
+        "invoice_service": invoice_service,
     }
