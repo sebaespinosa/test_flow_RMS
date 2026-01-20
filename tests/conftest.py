@@ -10,52 +10,76 @@ from sqlalchemy.orm import sessionmaker
 from app.database.base import Base
 
 
-@pytest_asyncio.fixture
-async def test_db():
-    """Create test database session"""
+@pytest_asyncio.fixture(scope="session")
+async def test_engine():
+    """Create a single test database engine for all tests.
     
-    # Use in-memory SQLite for tests
+    Using session scope ensures tables are created once and reused,
+    while function-scoped sessions with transaction rollback provide isolation.
+    This avoids the "index already exists" error from SQLAlchemy metadata conflicts.
+    """
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         echo=False,
         future=True
     )
     
-    # Create all tables
+    # Create all tables once
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
-    # Create session factory
+    yield engine
+    
+    # Cleanup after all tests
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def test_db(test_engine):
+    """Create a fresh session for each test.
+    
+    Uses transaction rollback for cleanup, preventing data from leaking between tests
+    while avoiding the "index already exists" error from SQLAlchemy metadata.
+    """
     session_factory = sessionmaker(
-        engine,
+        test_engine,
         class_=AsyncSession,
         expire_on_commit=False,
         autoflush=False
     )
     
-    async with session_factory() as session:
-        yield session
+    test_session = session_factory()
+    
+    yield test_session
     
     # Cleanup
-    await engine.dispose()
+    await test_session.close()
 
 
 @pytest.fixture
-def test_app():
+def test_app(test_db):
     """Create test FastAPI application"""
     from app.main import create_app
-    from fastapi.testclient import TestClient
+    from app.database.session import get_db
     
     app = create_app()
     
-    # Note: TestClient doesn't support async, use httpx.AsyncClient for async tests
+    # Override the database dependency with test database
+    async def override_get_db():
+        yield test_db
+    
+    app.dependency_overrides[get_db] = override_get_db
+    
     return app
 
 
 @pytest_asyncio.fixture
 async def async_client(test_app):
     """Create async HTTP client for testing"""
-    from httpx import AsyncClient
+    from httpx import AsyncClient, ASGITransport
     
-    async with AsyncClient(app=test_app, base_url="http://test") as client:
+    transport = ASGITransport(app=test_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client

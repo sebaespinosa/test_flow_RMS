@@ -3,43 +3,18 @@ Test idempotency repository functionality.
 """
 
 import pytest
-import pytest_asyncio
 from datetime import datetime, timedelta
 from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
 
-from app.database.base import Base
 from app.infrastructure.idempotency.models import IdempotencyRecordEntity
 from app.infrastructure.idempotency.repository import IdempotencyRepository
 from app.config.exceptions import ConflictError
 
 
-@pytest_asyncio.fixture
-async def idempotency_db():
-    """Create test database for idempotency tests"""
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
-    session_factory = sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-        autoflush=False
-    )
-    
-    async with session_factory() as session:
-        yield session
-    
-    await engine.dispose()
-
-
 @pytest.mark.asyncio
-async def test_first_request_creates_record(idempotency_db):
+async def test_first_request_creates_record(test_db):
     """First request stores idempotency record"""
-    repo = IdempotencyRepository(idempotency_db)
+    repo = IdempotencyRepository(test_db)
     
     record = IdempotencyRecordEntity.from_request(
         key="req-123",
@@ -49,7 +24,7 @@ async def test_first_request_creates_record(idempotency_db):
     )
     
     await repo.create(record)
-    await idempotency_db.commit()
+    await test_db.commit()
     
     # Verify record exists and hasn't expired
     retrieved = await repo.get_by_key("req-123", 1)
@@ -60,9 +35,9 @@ async def test_first_request_creates_record(idempotency_db):
 
 
 @pytest.mark.asyncio
-async def test_duplicate_key_conflict(idempotency_db):
+async def test_duplicate_key_conflict(test_db):
     """Reusing key with different payload raises 409"""
-    repo = IdempotencyRepository(idempotency_db)
+    repo = IdempotencyRepository(test_db)
     
     # First request
     record1 = IdempotencyRecordEntity.from_request(
@@ -72,7 +47,7 @@ async def test_duplicate_key_conflict(idempotency_db):
         request_hash="abc123"
     )
     await repo.create(record1)
-    await idempotency_db.commit()
+    await test_db.commit()
     
     # Retry with different payload
     record2 = IdempotencyRecordEntity.from_request(
@@ -84,12 +59,14 @@ async def test_duplicate_key_conflict(idempotency_db):
     
     with pytest.raises(ConflictError):
         await repo.create(record2)
+    
+    await test_db.commit()
 
 
 @pytest.mark.asyncio
-async def test_ttl_expiration(idempotency_db):
+async def test_ttl_expiration(test_db):
     """Expired records treated as non-existent"""
-    repo = IdempotencyRepository(idempotency_db)
+    repo = IdempotencyRepository(test_db)
     
     record = IdempotencyRecordEntity(
         idempotency_key="req-123",
@@ -99,8 +76,8 @@ async def test_ttl_expiration(idempotency_db):
         # Already expired
         expires_at=datetime.utcnow() - timedelta(hours=1)
     )
-    idempotency_db.add(record)
-    await idempotency_db.commit()
+    test_db.add(record)
+    await test_db.commit()
     
     # Should return None (expired = not found)
     retrieved = await repo.get_by_key("req-123", 1)
@@ -108,9 +85,9 @@ async def test_ttl_expiration(idempotency_db):
 
 
 @pytest.mark.asyncio
-async def test_cleanup_expired_records(idempotency_db):
+async def test_cleanup_expired_records(test_db):
     """Background task removes expired records"""
-    repo = IdempotencyRepository(idempotency_db)
+    repo = IdempotencyRepository(test_db)
     
     # Create 3 expired records
     for i in range(3):
@@ -121,18 +98,18 @@ async def test_cleanup_expired_records(idempotency_db):
             request_payload_hash="hash",
             expires_at=datetime.utcnow() - timedelta(hours=1)
         )
-        idempotency_db.add(record)
+        test_db.add(record)
     
-    await idempotency_db.commit()
+    await test_db.commit()
     
     # Run cleanup
     deleted = await repo.cleanup_expired()
-    await idempotency_db.commit()
+    await test_db.commit()
     
     assert deleted == 3
     
     # Verify all deleted
-    result = await idempotency_db.execute(
+    result = await test_db.execute(
         select(func.count(IdempotencyRecordEntity.id))
     )
     remaining = result.scalar()
@@ -140,9 +117,9 @@ async def test_cleanup_expired_records(idempotency_db):
 
 
 @pytest.mark.asyncio
-async def test_update_response_caching(idempotency_db):
+async def test_update_response_caching(test_db):
     """Response data can be cached for retries"""
-    repo = IdempotencyRepository(idempotency_db)
+    repo = IdempotencyRepository(test_db)
     
     # Create record
     record = IdempotencyRecordEntity.from_request(
@@ -152,12 +129,12 @@ async def test_update_response_caching(idempotency_db):
         request_hash="abc123"
     )
     await repo.create(record)
-    await idempotency_db.commit()
+    await test_db.commit()
     
     # Update with response
     response_data = {"imported_count": 5, "ids": [1, 2, 3, 4, 5]}
     await repo.update_response("req-123", 1, response_data, 201)
-    await idempotency_db.commit()
+    await test_db.commit()
     
     # Verify response cached
     retrieved = await repo.get_by_key("req-123", 1)
