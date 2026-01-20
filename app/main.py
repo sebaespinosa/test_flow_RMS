@@ -71,9 +71,9 @@ def create_app() -> FastAPI:
             "openapi_url": "/openapi.json"
         }
     
-    # TODO: Register routers as domains are created
-    # from app.tenants.rest.router import router as tenants_router
-    # app.include_router(tenants_router, prefix=f"{settings.api_v1_prefix}/tenants")
+    # Register routers (imported here to avoid circular imports at module level)
+    from app.tenants.rest.router import router as tenants_router
+    app.include_router(tenants_router, prefix=f"{settings.api_v1_prefix}/tenants")
     
     # TODO: Setup GraphQL endpoint
     # from strawberry.fastapi import GraphQLRouter

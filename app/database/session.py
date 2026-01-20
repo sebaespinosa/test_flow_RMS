@@ -34,16 +34,19 @@ _session_factory = None
 
 
 async def init_db():
-    """Initialize database connection and create tables"""
+    """
+    Initialize database connection.
+    Registers all models with SQLAlchemy.
+    NOTE: Do NOT create tables here - use Alembic migrations instead.
+    """
     global _engine, _session_factory
+    
+    # Register all models with Base before creating connections
+    from app.database.base import register_models
+    register_models()
     
     _engine = get_engine()
     _session_factory = get_session_factory(_engine)
-    
-    # Create all tables
-    async with _engine.begin() as conn:
-        from app.database.base import Base
-        await conn.run_sync(Base.metadata.create_all)
 
 
 async def close_db():

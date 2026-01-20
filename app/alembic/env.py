@@ -24,7 +24,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import all models so they're registered in Base.metadata
-from app.database.base import Base
+from app.database.base import Base, register_models
+register_models()  # Register all models with Base
 target_metadata = Base.metadata
 
 # Get database URL from environment
