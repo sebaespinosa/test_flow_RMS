@@ -6,3 +6,4 @@ No Tracing and logging
 
 
 Added pagination and filtering to all endpoints (regardless not requiere, best practice)
+Happy path testing, few edge cases only
