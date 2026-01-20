@@ -7,14 +7,14 @@ from typing import Optional, List
 from decimal import Decimal
 from datetime import datetime
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.reconciliation.models import MatchEntity
 from app.reconciliation.repository import MatchRepository
 from app.reconciliation.scoring import calculate_match_score
+from app.ai.service import AIExplanationService
 from app.invoices.repository import InvoiceRepository
 from app.bank_transactions.repository import BankTransactionRepository
 from app.config.exceptions import NotFoundError, ConflictError
+from app.config.settings import Settings
 
 
 class ReconciliationService:
@@ -25,11 +25,15 @@ class ReconciliationService:
         match_repo: MatchRepository,
         invoice_repo: InvoiceRepository,
         transaction_repo: BankTransactionRepository,
+        ai_service: Optional[AIExplanationService] = None,
+        settings: Optional[Settings] = None,
     ):
         """Initialize with repository dependencies"""
         self.match_repo = match_repo
         self.invoice_repo = invoice_repo
         self.transaction_repo = transaction_repo
+        self.ai_service = ai_service
+        self.settings = settings
 
     async def run_reconciliation(
         self,
@@ -199,3 +203,91 @@ class ReconciliationService:
                 )
 
         return match
+
+    async def explain_match(self, match_id: int, tenant_id: int) -> dict:
+        """
+        Generate AI explanation for why a match was proposed.
+        
+        Strategy:
+        1. Get the match record
+        2. Get the invoice and transaction details
+        3. Try to get AI explanation using AIExplanationService
+        4. Fall back to heuristic reason if AI fails or is disabled
+        5. Return explanation with confidence and source
+        
+        Args:
+            match_id: Match ID to explain
+            tenant_id: Tenant ID for isolation
+        
+        Returns:
+            Dict with: ai_explanation, ai_confidence, heuristic_reason, 
+            heuristic_score, source, ai_error_message
+        
+        Raises:
+            NotFoundError: If match, invoice, or transaction not found
+        """
+        # Get the match
+        match = await self.match_repo.get_by_id(match_id, tenant_id)
+        if not match:
+            raise NotFoundError(detail=f"Match {match_id} not found")
+
+        # Get the invoice
+        invoice = await self.invoice_repo.get_by_id(match.invoice_id, tenant_id)
+        if not invoice:
+            raise NotFoundError(detail=f"Invoice {match.invoice_id} not found")
+
+        # Get the transaction
+        transaction = await self.transaction_repo.get_by_id(
+            match.bank_transaction_id, tenant_id
+        )
+        if not transaction:
+            raise NotFoundError(
+                detail=f"Transaction {match.bank_transaction_id} not found"
+            )
+
+        # Prepare context for AI
+        context = {
+            "invoice": {
+                "id": invoice.id,
+                "amount": float(invoice.amount),
+                "invoice_date": invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+                "vendor_id": invoice.vendor_id,
+                "description": invoice.description,
+            },
+            "transaction": {
+                "id": transaction.id,
+                "amount": float(transaction.amount),
+                "posted_at": transaction.posted_at.isoformat() if transaction.posted_at else None,
+                "description": transaction.description,
+            },
+            "match": {
+                "score": float(match.score),
+                "reason": match.reason,
+            }
+        }
+
+        # Try AI explanation
+        ai_explanation = None
+        ai_confidence = None
+        ai_error_message = None
+        source = "heuristic"
+
+        if self.ai_service and self.settings and self.settings.ai_enabled:
+            try:
+                result = await self.ai_service.generate_explanation(context)
+                ai_explanation = result.get("explanation")
+                ai_confidence = result.get("confidence", 0)
+                source = "ai"
+            except Exception as e:
+                # Fall back to heuristic
+                ai_error_message = str(e)
+                source = "fallback"
+
+        return {
+            "ai_explanation": ai_explanation,
+            "ai_confidence": ai_confidence,
+            "heuristic_reason": match.reason or "Amount and date match",
+            "heuristic_score": int(match.score),
+            "source": source,
+            "ai_error_message": ai_error_message,
+        }

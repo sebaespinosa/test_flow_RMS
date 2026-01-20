@@ -10,25 +10,36 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
 from app.reconciliation.service import ReconciliationService
+from app.ai.service import AIExplanationService
 from app.reconciliation.repository import MatchRepository
 from app.reconciliation.rest.schemas import (
     ReconciliationResponse,
     MatchRead,
     ConfirmMatchRequest,
+    ExplanationResponse,
 )
 from app.invoices.repository import InvoiceRepository
 from app.bank_transactions.repository import BankTransactionRepository
 from app.config.exceptions import NotFoundError, ConflictError
+from app.config.settings import get_settings
 
 
 def get_reconciliation_service(
     db: AsyncSession = Depends(get_db),
 ) -> ReconciliationService:
     """Dependency to provide reconciliation service"""
+    settings = get_settings()
     match_repo = MatchRepository(db)
     invoice_repo = InvoiceRepository(db)
     transaction_repo = BankTransactionRepository(db)
-    return ReconciliationService(match_repo, invoice_repo, transaction_repo)
+    ai_service = AIExplanationService(settings) if settings.ai_enabled else None
+    return ReconciliationService(
+        match_repo, 
+        invoice_repo, 
+        transaction_repo, 
+        ai_service=ai_service,
+        settings=settings,
+    )
 
 
 router = APIRouter(prefix="/api/v1/tenants", tags=["reconciliation"])
@@ -120,4 +131,43 @@ async def confirm_match(
         status=match.status,
         reason=match.reason,
         created_at=match.created_at,
+    )
+
+
+@router.get(
+    "/{tenant_id}/matches/{match_id}/explain",
+    response_model=ExplanationResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def explain_match(
+    tenant_id: int,
+    match_id: int,
+    service: ReconciliationService = Depends(get_reconciliation_service),
+) -> ExplanationResponse:
+    """
+    Get AI explanation for why a match was proposed.
+    
+    Returns both AI explanation (if available) and heuristic reason:
+    - ai_explanation: LLM-generated explanation if AI is enabled
+    - ai_confidence: Confidence score (0-100) for AI explanation
+    - heuristic_reason: Rule-based reason from scoring algorithm
+    - heuristic_score: Score (0-100) from heuristic matching
+    - source: "ai" (AI enabled), "heuristic" (fallback), "fallback" (AI error)
+    - ai_error_message: Error details if AI failed
+    
+    Raises:
+    - 404: If match, invoice, or transaction not found
+    """
+    try:
+        explanation = await service.explain_match(match_id, tenant_id)
+    except NotFoundError as e:
+        raise NotFoundError(detail=e.detail)
+
+    return ExplanationResponse(
+        ai_explanation=explanation["ai_explanation"],
+        ai_confidence=explanation["ai_confidence"],
+        heuristic_reason=explanation["heuristic_reason"],
+        heuristic_score=explanation["heuristic_score"],
+        source=explanation["source"],
+        ai_error_message=explanation["ai_error_message"],
     )

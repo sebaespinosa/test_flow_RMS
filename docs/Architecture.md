@@ -554,7 +554,7 @@ async def get_invoice_summary_by_vendor(
 ### Layer Placement
 
 ```python
-# reconciliation/ai_service.py
+# ai/service.py
 class AIExplanationService:
     """Isolated AI integration - not part of core reconciliation logic"""
     

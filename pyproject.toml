@@ -42,6 +42,7 @@ dependencies = [
     
     # Async utilities
     "httpx>=0.25.0",
+    "google-generativeai (>=0.8.6,<0.9.0)",
 ]
 
 [project.optional-dependencies]
