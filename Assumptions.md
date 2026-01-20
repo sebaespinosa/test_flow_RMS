@@ -19,7 +19,7 @@ Definition that should validated with product team
 "Force" timestamps with and without miliseconds for all date/times 
 --> Reject data, not "storing" what pass??? For example, amounts integer and greater than zero (points to be talked out with Product Team)
 Fail Fast approach for bulk uploads, validates all the data before start processing them, if a non-valid data found, the request is rejected
-
+Reconciliation -> when confirmed, Confirm Behavior: Update invoice status + reject other candidates for that invoice
 
 
 # Placeholders
