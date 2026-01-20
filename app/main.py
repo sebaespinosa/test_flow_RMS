@@ -75,11 +75,17 @@ def create_app() -> FastAPI:
     from app.tenants.rest.router import router as tenants_router
     app.include_router(tenants_router, prefix=f"{settings.api_v1_prefix}/tenants")
     
-    # TODO: Setup GraphQL endpoint
-    # from strawberry.fastapi import GraphQLRouter
-    # from app.graphql.schema import schema
-    # graphql_app = GraphQLRouter(schema)
-    # app.include_router(graphql_app, prefix="/graphql")
+    # Setup GraphQL endpoint
+    from strawberry.fastapi import GraphQLRouter
+    from app.graphql.schema import schema
+    from app.graphql.context import get_graphql_context
+    
+    # Create GraphQL router with context getter
+    graphql_app = GraphQLRouter(
+        schema,
+        context_getter=get_graphql_context
+    )
+    app.include_router(graphql_app, prefix="/graphql", tags=["graphql"])
     
     return app
 
