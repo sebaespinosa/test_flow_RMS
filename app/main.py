@@ -76,11 +76,14 @@ def create_app() -> FastAPI:
     from app.invoices.rest.router import router as invoices_router
     from app.bank_transactions.rest.router import router as bank_transactions_router
     from app.reconciliation.rest.router import router as reconciliation_router
+    from app.seed.rest.router import router as seed_router
     
     app.include_router(tenants_router, prefix=f"{settings.api_v1_prefix}/tenants")
     app.include_router(invoices_router, prefix=settings.api_v1_prefix)
     app.include_router(bank_transactions_router, prefix=settings.api_v1_prefix)
     app.include_router(reconciliation_router)
+    if settings.enable_seed_endpoints:
+        app.include_router(seed_router)
     
     # Setup GraphQL endpoint
     from strawberry.fastapi import GraphQLRouter

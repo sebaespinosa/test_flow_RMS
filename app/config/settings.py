@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     
     # API
     api_v1_prefix: str = "/api/v1"
+    enable_seed_endpoints: bool = Field(default=False, alias="ENABLE_SEED_ENDPOINTS")
     
     # Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")

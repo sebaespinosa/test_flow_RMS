@@ -22,6 +22,8 @@ Although the application is heavy developed using AI Coding Assitance (copilot i
     Use debug for VSConde
 3. Seed endpoint
 
+POST /api/v1/seed
+POST /api/v1/seed/cleanup
 
 Testing
 For testing without AI, set AI_ENABLED=false (won't require API key)
