@@ -1,0 +1,1463 @@
+{
+  "info": {
+    "name": "RMS API - E2E Testing",
+    "description": "Comprehensive Postman collection for manual integration/E2E testing of RMS API with seed data management, idempotency workflows, and reconciliation flows.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Seed Lifecycle Management",
+      "description": "Manage test data: seed, inspect, cleanup, reseed",
+      "item": [
+        {
+          "name": "1. Seed Test Data",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/seed",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "seed"
+              ]
+            },
+            "description": "Destructive seed: deletes all tenant-scoped data and inserts demo fixtures"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Check Seed Status (Before)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/seed/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "seed",
+                "status"
+              ]
+            },
+            "description": "Inspect dataset: returns counts and date ranges"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Cleanup Seed Data",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/seed/cleanup",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "seed",
+                "cleanup"
+              ]
+            },
+            "description": "Delete all tenant-scoped data without inserting replacements"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Check Seed Status (After Cleanup)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/seed/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "seed",
+                "status"
+              ]
+            },
+            "description": "Verify all data cleaned up"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tenants",
+      "description": "Tenant CRUD and reactivation endpoints",
+      "item": [
+        {
+          "name": "Create Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Tenant {{$timestamp}}\",\n  \"description\": \"E2E test tenant\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants"
+              ]
+            },
+            "description": "Create a new tenant"
+          },
+          "response": []
+        },
+        {
+          "name": "List Tenants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants"
+              ]
+            },
+            "description": "List all tenants with pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tenant by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}"
+              ]
+            },
+            "description": "Retrieve a specific tenant by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Tenant",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}"
+              ]
+            },
+            "description": "Update tenant (partial)"
+          },
+          "response": []
+        },
+        {
+          "name": "Soft Delete Tenant",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}"
+              ]
+            },
+            "description": "Soft delete a tenant"
+          },
+          "response": []
+        },
+        {
+          "name": "Reactivate Tenant",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/reactivate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "reactivate"
+              ]
+            },
+            "description": "Reactivate a soft-deleted tenant"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "description": "Invoice CRUD operations",
+      "item": [
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendor_id\": 1,\n  \"invoice_number\": \"INV-{{$timestamp}}\",\n  \"amount\": 1250.50,\n  \"invoice_date\": \"2026-01-15\",\n  \"due_date\": \"2026-02-15\",\n  \"status\": \"pending\",\n  \"description\": \"E2E test invoice\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/invoices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "invoices"
+              ]
+            },
+            "description": "Create a new invoice"
+          },
+          "response": []
+        },
+        {
+          "name": "List Invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/invoices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "invoices"
+              ]
+            },
+            "description": "List invoices with filtering and pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Invoice by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/invoices/{{invoice_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "invoices",
+                "{{invoice_id}}"
+              ]
+            },
+            "description": "Retrieve a specific invoice"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Invoice",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processing\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/invoices/{{invoice_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "invoices",
+                "{{invoice_id}}"
+              ]
+            },
+            "description": "Update invoice details"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Invoice",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/invoices/{{invoice_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "invoices",
+                "{{invoice_id}}"
+              ]
+            },
+            "description": "Delete an invoice"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bank Transactions",
+      "description": "Bank transaction import (with idempotency support) and queries",
+      "item": [
+        {
+          "name": "Import Bank Transactions (No Idempotency)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate sample transactions for import",
+                  "const transactions = [",
+                  "  {",
+                  "    \"posting_date\": \"2026-01-20\",",
+                  "    \"description\": \"Payment E2E Test {{$timestamp}}\",",
+                  "    \"amount\": 1250.50,",
+                  "    \"transaction_type\": \"credit\",",
+                  "    \"reference\": \"TXN-{{$randomInt(10000, 99999)}}\"",
+                  "  }",
+                  "];",
+                  "pm.environment.set('import_transactions', JSON.stringify(transactions));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactions\": {{import_transactions}}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/bank-transactions/import",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "bank-transactions",
+                "import"
+              ]
+            },
+            "description": "Bulk import bank transactions (first import, no idempotency key)"
+          },
+          "response": []
+        },
+        {
+          "name": "Import with Idempotency (First Attempt)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate idempotency key and store for retry",
+                  "const idempotencyKey = pm.environment.get('idempotency_key') || 'e2e-test-' + Date.now();",
+                  "pm.environment.set('idempotency_key', idempotencyKey);",
+                  "",
+                  "// Sample transaction payload",
+                  "const transactions = [",
+                  "  {",
+                  "    \"posting_date\": \"2026-01-21\",",
+                  "    \"description\": \"Idempotent Import {{idempotencyKey}}\",",
+                  "    \"amount\": 500.00,",
+                  "    \"transaction_type\": \"credit\",",
+                  "    \"reference\": \"IDMP-{{$randomInt(10000, 99999)}}\"",
+                  "  }",
+                  "];",
+                  "pm.environment.set('import_transactions_idempotent', JSON.stringify(transactions));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactions\": {{import_transactions_idempotent}}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/bank-transactions/import",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "bank-transactions",
+                "import"
+              ]
+            },
+            "description": "Import with idempotency key (first attempt, expect 201)"
+          },
+          "response": []
+        },
+        {
+          "name": "Retry Import with Same Key (Should Return Cached)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Verify 200 on retry (cached response)",
+                  "pm.test('Idempotent retry returns 200', function() {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactions\": {{import_transactions_idempotent}}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/bank-transactions/import",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "bank-transactions",
+                "import"
+              ]
+            },
+            "description": "Retry the same idempotency key with identical payload (expect 200 cached)"
+          },
+          "response": []
+        },
+        {
+          "name": "Conflict: Same Key, Different Payload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Verify 409 on conflicting payload",
+                  "pm.test('Conflicting payload returns 409', function() {",
+                  "  pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactions\": [\n    {\n      \"posting_date\": \"2026-01-22\",\n      \"description\": \"DIFFERENT PAYLOAD\",\n      \"amount\": 999.99,\n      \"transaction_type\": \"debit\",\n      \"reference\": \"CONFLICT-TEST\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/bank-transactions/import",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "bank-transactions",
+                "import"
+              ]
+            },
+            "description": "Send same idempotency key with different payload (expect 409 conflict)"
+          },
+          "response": []
+        },
+        {
+          "name": "List Bank Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/bank-transactions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "bank-transactions"
+              ]
+            },
+            "description": "List all bank transactions for a tenant"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Bank Transaction by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/bank-transactions/{{transaction_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "bank-transactions",
+                "{{transaction_id}}"
+              ]
+            },
+            "description": "Retrieve a specific bank transaction"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reconciliation",
+      "description": "Reconciliation, match confirmation, and AI explanations",
+      "item": [
+        {
+          "name": "Run Reconciliation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Extract first match_id for later use",
+                  "const responseBody = pm.response.json();",
+                  "if (responseBody.matches && responseBody.matches.length > 0) {",
+                  "  pm.environment.set('match_id', responseBody.matches[0].id);",
+                  "  pm.test('Got matches from reconciliation', function() {",
+                  "    pm.expect(responseBody.matches.length).to.be.greaterThan(0);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/reconcile?top=10&min_score=50",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "reconcile"
+              ],
+              "query": [
+                {
+                  "key": "top",
+                  "value": "10",
+                  "description": "Top N matches to return"
+                },
+                {
+                  "key": "min_score",
+                  "value": "50",
+                  "description": "Minimum confidence score (0-100)"
+                }
+              ]
+            },
+            "description": "Run reconciliation algorithm and get match candidates"
+          },
+          "response": []
+        },
+        {
+          "name": "Get AI Explanation for Match",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/matches/{{match_id}}/explain",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "matches",
+                "{{match_id}}",
+                "explain"
+              ]
+            },
+            "description": "Get AI-generated explanation for why a match was proposed (uses Gemini if enabled, fallback heuristic otherwise)"
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Match",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Match confirmed', function() {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.equal('confirmed');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/matches/{{match_id}}/confirm",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "matches",
+                "{{match_id}}",
+                "confirm"
+              ]
+            },
+            "description": "Confirm a proposed match (transitions to 'confirmed' status)"
+          },
+          "response": []
+        },
+        {
+          "name": "List Matches for Invoice",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/invoices/{{invoice_id}}/matches",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenant_id}}",
+                "invoices",
+                "{{invoice_id}}",
+                "matches"
+              ]
+            },
+            "description": "List all matches for a specific invoice"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "GraphQL Queries",
+      "description": "GraphQL queries and mutations for RMS API",
+      "item": [
+        {
+          "name": "GraphQL: Get Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query GetTenant($id: Int!) { tenant(id: $id) { id name description createdAt } }\",\n  \"variables\": { \"id\": {{tenant_id}} }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/graphql",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "graphql"
+              ]
+            },
+            "description": "GraphQL query to fetch a tenant by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "GraphQL: List Invoices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query ListInvoices($tenantId: Int!) { invoices(tenantId: $tenantId) { id invoiceNumber amount status invoiceDate } }\",\n  \"variables\": { \"tenantId\": {{tenant_id}} }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/graphql",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "graphql"
+              ]
+            },
+            "description": "GraphQL query to list invoices for a tenant"
+          },
+          "response": []
+        },
+        {
+          "name": "GraphQL: Create Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation CreateTenant($input: TenantCreateInput!) { createTenant(input: $input) { id name description } }\",\n  \"variables\": {\n    \"input\": {\n      \"name\": \"GraphQL Tenant {{$timestamp}}\",\n      \"description\": \"Created via GraphQL\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/graphql",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "graphql"
+              ]
+            },
+            "description": "GraphQL mutation to create a new tenant"
+          },
+          "response": []
+        },
+        {
+          "name": "GraphQL: List Bank Transactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query ListTransactions($tenantId: Int!) { bankTransactions(tenantId: $tenantId) { id postingDate description amount transactionType } }\",\n  \"variables\": { \"tenantId\": {{tenant_id}} }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/graphql",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "graphql"
+              ]
+            },
+            "description": "GraphQL query to list bank transactions for a tenant"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "System Health",
+      "description": "System health and metadata endpoints",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "System health check with database connectivity"
+          },
+          "response": []
+        },
+        {
+          "name": "API Root Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "API root endpoint with documentation links"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "E2E Test Workflows",
+      "description": "Complete end-to-end workflows combining multiple endpoints",
+      "item": [
+        {
+          "name": "Workflow: Complete Reconciliation Flow",
+          "description": "Full flow: Seed → Import → Reconcile → Explain → Confirm",
+          "item": [
+            {
+              "name": "1. Seed Test Data",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/seed",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "seed"
+                  ]
+                },
+                "description": "Step 1: Seed fresh test data"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Get Tenant ID from Seed Status",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "// Capture tenant_id from seed response",
+                      "const body = pm.response.json();",
+                      "if (body.tenant_id) {",
+                      "  pm.environment.set('tenant_id', body.tenant_id);",
+                      "} else {",
+                      "  // Fallback: assume first tenant in list is seeded tenant",
+                      "  pm.environment.set('tenant_id', 1);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/seed/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "seed",
+                    "status"
+                  ]
+                },
+                "description": "Step 2: Get seed status and extract tenant ID"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Run Reconciliation",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "// Capture first match ID",
+                      "const body = pm.response.json();",
+                      "if (body.matches && body.matches.length > 0) {",
+                      "  pm.environment.set('match_id', body.matches[0].id);",
+                      "  pm.test('Reconciliation found matches', function() {",
+                      "    pm.expect(body.matches.length).to.be.greaterThan(0);",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/reconcile?top=5&min_score=50",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "{{tenant_id}}",
+                    "reconcile"
+                  ],
+                  "query": [
+                    {
+                      "key": "top",
+                      "value": "5"
+                    },
+                    {
+                      "key": "min_score",
+                      "value": "50"
+                    }
+                  ]
+                },
+                "description": "Step 3: Run reconciliation to find matches"
+              },
+              "response": []
+            },
+            {
+              "name": "4. Get AI Explanation",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/matches/{{match_id}}/explain",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "{{tenant_id}}",
+                    "matches",
+                    "{{match_id}}",
+                    "explain"
+                  ]
+                },
+                "description": "Step 4: Get AI-powered explanation for the match"
+              },
+              "response": []
+            },
+            {
+              "name": "5. Confirm Match",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/matches/{{match_id}}/confirm",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "{{tenant_id}}",
+                    "matches",
+                    "{{match_id}}",
+                    "confirm"
+                  ]
+                },
+                "description": "Step 5: Confirm the match (finalize reconciliation)"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Workflow: Idempotency Testing",
+          "description": "Test idempotent import behavior: first request → retry same → conflicting payload",
+          "item": [
+            {
+              "name": "1. Setup: Seed Data",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/seed",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "seed"
+                  ]
+                },
+                "description": "Seed fresh data"
+              },
+              "response": []
+            },
+            {
+              "name": "2. First Import with Idempotency Key",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      "const key = 'idempotency-' + Date.now();",
+                      "pm.environment.set('test_idempotency_key', key);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('First import returns 201', function() {",
+                      "  pm.response.to.have.status(201);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{test_idempotency_key}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transactions\": [\n    {\n      \"posting_date\": \"2026-01-20\",\n      \"description\": \"Idempotent test transaction\",\n      \"amount\": 750.00,\n      \"transaction_type\": \"credit\",\n      \"reference\": \"IDMP-001\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/bank-transactions/import",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "{{tenant_id}}",
+                    "bank-transactions",
+                    "import"
+                  ]
+                },
+                "description": "First import with unique idempotency key (expect 201)"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Retry with Same Key (Expect 200)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Retry returns 200 cached', function() {",
+                      "  pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{test_idempotency_key}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transactions\": [\n    {\n      \"posting_date\": \"2026-01-20\",\n      \"description\": \"Idempotent test transaction\",\n      \"amount\": 750.00,\n      \"transaction_type\": \"credit\",\n      \"reference\": \"IDMP-001\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/bank-transactions/import",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "{{tenant_id}}",
+                    "bank-transactions",
+                    "import"
+                  ]
+                },
+                "description": "Retry with same key and identical payload (expect 200 cached response)"
+              },
+              "response": []
+            },
+            {
+              "name": "4. Conflict: Same Key, Different Payload (Expect 409)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('Conflicting payload returns 409', function() {",
+                      "  pm.response.to.have.status(409);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{test_idempotency_key}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"transactions\": [\n    {\n      \"posting_date\": \"2026-01-21\",\n      \"description\": \"DIFFERENT TRANSACTION\",\n      \"amount\": 999.99,\n      \"transaction_type\": \"debit\",\n      \"reference\": \"CONFLICT-999\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/v1/tenants/{{tenant_id}}/bank-transactions/import",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "{{tenant_id}}",
+                    "bank-transactions",
+                    "import"
+                  ]
+                },
+                "description": "Same key with different payload (expect 409 conflict)"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Workflow: Seed Lifecycle",
+          "description": "Test seed data management: seed → inspect → cleanup → verify → reseed",
+          "item": [
+            {
+              "name": "1. Seed Fresh Data",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/seed",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "seed"
+                  ]
+                },
+                "description": "Insert demo fixtures"
+              },
+              "response": []
+            },
+            {
+              "name": "2. Inspect Seed Status (Before Cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "pm.environment.set('seed_status_before', JSON.stringify(body));",
+                      "pm.test('Has data after seed', function() {",
+                      "  pm.expect(body.total_invoices).to.be.greaterThan(0);",
+                      "  pm.expect(body.total_transactions).to.be.greaterThan(0);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/seed/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "seed",
+                    "status"
+                  ]
+                },
+                "description": "Check dataset state (should have data)"
+              },
+              "response": []
+            },
+            {
+              "name": "3. Cleanup All Data",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/seed/cleanup",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "seed",
+                    "cleanup"
+                  ]
+                },
+                "description": "Delete all tenant-scoped data"
+              },
+              "response": []
+            },
+            {
+              "name": "4. Inspect Status (After Cleanup)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "pm.test('Data cleaned up', function() {",
+                      "  pm.expect(body.total_invoices).to.equal(0);",
+                      "  pm.expect(body.total_transactions).to.equal(0);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/seed/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "seed",
+                    "status"
+                  ]
+                },
+                "description": "Verify all data deleted (counts should be 0)"
+              },
+              "response": []
+            },
+            {
+              "name": "5. Reseed Data",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/seed",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "seed"
+                  ]
+                },
+                "description": "Reinsert demo fixtures"
+              },
+              "response": []
+            },
+            {
+              "name": "6. Final Status Check",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "pm.test('Data restored after reseed', function() {",
+                      "  pm.expect(body.total_invoices).to.be.greaterThan(0);",
+                      "  pm.expect(body.total_transactions).to.be.greaterThan(0);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/seed/status",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "seed",
+                    "status"
+                  ]
+                },
+                "description": "Verify data restored (counts restored)"
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

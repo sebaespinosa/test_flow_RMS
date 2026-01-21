@@ -18,10 +18,12 @@ Although the application is heavy developed using AI Coding Assitance (copilot i
 
 1. The project uses poetry for virtual environment handling, althought a requirements.txt file is provided for using another tool
 ```bash
-poetry install --no-root  # Keep .env as template, use .env.local for local overrides
+poetry install --no-root
 # Use file requirements.txt with another virtual environment and dependency manager
 ```
-2. Update .env file with your GEMINI_API_KEY and other variables (You can get one from Google AI Studio). Set ENABLE_SEED_ENDPOINTS=true before calling any seed endpoints; they are off by default to prevent accidents.
+2. Set up environment variables:
+   - Update `.env` (DO NOT commit `.env` - it contains secrets)
+   - Set `ENABLE_SEED_ENDPOINTS=true` before calling any seed endpoints; they are off by default to prevent accidents
 3. Run Alembic migrations (from repo root; point Alembic to the config under app/):
 ```bash
 poetry run alembic -c app/alembic.ini upgrade head
@@ -52,10 +54,7 @@ curl http://localhost:8000/api/v1/seed/status
 curl -X POST http://localhost:8000/api/v1/seed/cleanup
 ```
 
-
-
-
-
+---
 
 ## Run Tests
 
@@ -82,3 +81,19 @@ poetry run pytest tests/ --cov=app --cov-report=html
 ```bash
 poetry run pytest tests/ -v --tb=short --looponfail
 ```
+
+---
+
+## Manual Integration Testing with Postman
+
+For hands-on E2E testing of API workflows, seed data management, and idempotency:
+
+1. Import Postman collection: [postman/RMS-API.postman_collection.json](postman/RMS-API.postman_collection.json)
+2. Import environment: [postman/RMS-API-Environment.postman_environment.json](postman/RMS-API-Environment.postman_environment.json)
+3. See [postman/README.md](postman/README.md) for detailed usage guide
+4. See [postman/HAPPY_PATH.md](postman/HAPPY_PATH.md) for detailed usage guide
+
+
+---
+
+

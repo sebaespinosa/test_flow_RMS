@@ -154,6 +154,30 @@ class InvoiceRepository(IInvoiceRepository):
         await self.session.delete(entity)
         await self.session.flush()
         return True
+
+    async def list_by_tenant(
+        self,
+        tenant_id: int,
+        skip: int = 0,
+        limit: int | None = None,
+    ) -> list[InvoiceEntity]:
+        """
+        Retrieve all invoices for a tenant (shorthand for get_all).
+        Used by reconciliation service.
+        
+        Args:
+            tenant_id: Tenant ID for isolation
+            skip: Number of records to skip (pagination)
+            limit: Maximum number of records to return (None = no limit)
+            
+        Returns:
+            List of InvoiceEntity objects
+        """
+        return await self.get_all(
+            tenant_id=tenant_id,
+            skip=skip,
+            limit=limit if limit else 500,  # Default reasonable limit
+        )
     
     async def exists_by_invoice_number(
         self,

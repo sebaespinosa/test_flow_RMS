@@ -56,9 +56,10 @@ dmypy.json
 logs/
 *.log
 
-# # Environment
+# # Environment (NEVER commit actual .env files - they contain secrets!)
 # .env
 # .env.local
+# .env.*.local
 
 # Pre-commit
 .pre-commit-framework

@@ -1,18 +1,12 @@
 """
 Google Gemini API client wrapper with retry and error handling.
+Uses direct REST API calls (more reliable than google.genai SDK).
 """
 
 import json
 import logging
 from typing import Optional
-import google.genai as genai
-from google.api_core.exceptions import (
-    ServiceUnavailable,
-    TooManyRequests,
-    Unauthenticated,
-    PermissionDenied,
-    InternalServerError,
-)
+import httpx
 
 from app.config.settings import Settings
 from app.infrastructure.retry import retry_on_exception, RetryError
@@ -23,8 +17,12 @@ logger = logging.getLogger(__name__)
 class GeminiClient:
     """
     Wrapper around Google Generative AI (Gemini) API.
+    Uses direct REST API calls via httpx (more reliable than SDK).
     Handles authentication, context formatting, and response parsing.
     """
+
+    # Generative Language API endpoint
+    BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
     def __init__(self, settings: Settings):
         """
@@ -40,8 +38,8 @@ class GeminiClient:
             raise ValueError("GEMINI_API_KEY is required")
 
         self.settings = settings
-        self.client = genai.Client(api_key=settings.gemini_api_key)
-        logger.info(f"Gemini client initialized with model: {settings.gemini_model_id}")
+        self.api_key = settings.gemini_api_key
+        logger.info(f"Gemini client initialized (REST API) with model: {settings.gemini_model_id}")
 
     async def generate_explanation(
         self,
@@ -75,7 +73,7 @@ class GeminiClient:
         )
 
         try:
-            # Call Gemini API (sync call wrapped in async context)
+            # Call Gemini API via REST
             response = await self._call_gemini_async(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
@@ -88,12 +86,23 @@ class GeminiClient:
             logger.info("Gemini explanation generated successfully")
             return result
 
-        except (ServiceUnavailable, TooManyRequests, InternalServerError) as e:
-            logger.warning(f"Transient Gemini API error: {type(e).__name__}: {str(e)}")
+        except httpx.TimeoutException as e:
+            logger.warning(f"Gemini API timeout: {str(e)}")
             raise
 
-        except (Unauthenticated, PermissionDenied) as e:
-            logger.error(f"Auth error in Gemini API: {type(e).__name__}: {str(e)}")
+        except httpx.HTTPStatusError as e:
+            status_code = e.response.status_code
+            error_msg = str(e)
+            
+            if status_code == 429:
+                logger.warning(
+                    f"Gemini API quota/rate limit (429): {error_msg} "
+                    "Falling back to heuristic explanation."
+                )
+            elif status_code == 401 or status_code == 403:
+                logger.error(f"Gemini API auth error ({status_code}): {error_msg}")
+            else:
+                logger.warning(f"Gemini API HTTP error ({status_code}): {error_msg}")
             raise
 
         except json.JSONDecodeError as e:
@@ -143,33 +152,81 @@ Provide your expert assessment of this match.
         max_tokens: int,
     ) -> str:
         """
-        Call Gemini API (wraps sync call in async context).
+        Call Gemini API using direct REST call (httpx).
         
         Args:
             system_prompt: System instruction
             user_prompt: User message
-            temperature: Temperature setting
-            max_tokens: Max tokens
+            temperature: Temperature setting (0.0-1.0)
+            max_tokens: Max output tokens
             
         Returns:
-            Response text
+            Response text from Gemini
+            
+        Raises:
+            httpx.HTTPStatusError: If API returns error status
         """
-        import asyncio
+        url = f"{self.BASE_URL}/{self.settings.gemini_model_id}:generateContent?key={self.api_key}"
+        
+        # Combine system and user prompts into a single text
+        # (Some API versions have issues with role-based formatting)
+        combined_text = f"{system_prompt}\n\n{user_prompt}"
+        
+        # Format request per Generative Language API spec
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": combined_text}
+                    ]
+                }
+            ]
+        }
 
-        def _call_sync() -> str:
-            response = self.client.models.generate_content(
-                model=self.settings.gemini_model_id,
-                contents=[system_prompt, user_prompt],
-                config=genai.types.GenerateContentConfig(
-                    temperature=temperature,
-                    max_output_tokens=max_tokens,
-                ),
-            )
-            return response.text
-
-        # Run in thread pool to avoid blocking
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, _call_sync)
+        logger.debug(f"Calling Gemini API via HTTP: POST {url[:80]}...")
+        logger.debug(f"Prompt length: {len(combined_text)} chars")
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.settings.ai_timeout_seconds) as client:
+                response = await client.post(url, json=payload)
+                
+                # Check for HTTP errors
+                if response.status_code != 200:
+                    try:
+                        error_data = response.json()
+                        error_msg = error_data.get("error", {}).get("message", "Unknown error")
+                    except:
+                        error_msg = response.text
+                    
+                    logger.error(f"Gemini API error {response.status_code}: {error_msg}")
+                    raise httpx.HTTPStatusError(
+                        message=error_msg,
+                        request=response.request,
+                        response=response
+                    )
+                
+                # Parse successful response
+                result = response.json()
+                
+                # Extract text from response
+                if "candidates" in result and result["candidates"]:
+                    candidate = result["candidates"][0]
+                    if "content" in candidate and "parts" in candidate["content"]:
+                        parts = candidate["content"]["parts"]
+                        if parts and "text" in parts[0]:
+                            return parts[0]["text"]
+                
+                raise ValueError(f"Unexpected response format: {result}")
+                
+        except httpx.TimeoutException as e:
+            logger.error(f"Gemini API timeout ({self.settings.ai_timeout_seconds}s): {e}")
+            raise
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Gemini API HTTP error: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Gemini API call failed: {e}")
+            raise
 
     def _parse_response(self, response_text: str) -> dict:
         """
